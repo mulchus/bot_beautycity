@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Owner, Client, Order, Schedule, Service
+from .models import Client, Schedule, Service, Order
 
 
 @admin.register(Client)
@@ -16,7 +16,6 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ('service_type', 'cost')
 
 
-admin.site.register(Owner)
 admin.site.register(Order)
 admin.site.register(Schedule)
 

@@ -1,20 +1,12 @@
 import datetime
 
 from django.db import models
-# from phonenumber_field import PhoneNumberField
-
-
-class Owner(models.Model):
-    tg_account = models.CharField('owner telegram account', max_length=32, unique=True)
-    tg_id = models.IntegerField('owner telegram_id for Bot', null=True, blank=True)
-
-    def __str__(self):
-        return f'owner {self.tg_account}'
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Client(models.Model):
     name = models.CharField('client name', max_length=20)
-    # phone = PhoneNumberField('client phone ', max_length=20, null=True, blank=True, db_index=True)
+    phone = PhoneNumberField('client phone ', max_length=20, null=True, blank=True, db_index=True)
     tg_account = models.CharField('client telegram account', max_length=32)
     tg_id = models.IntegerField('client telegram_id for Bot', null=True, blank=True, unique=True)
     
@@ -46,11 +38,11 @@ class Order(models.Model):
                                 related_name='service_orders')
     schedule = models.ForeignKey(Schedule, on_delete=models.DO_NOTHING, verbose_name='schedule',
                                  related_name='schedule_orders')
-    # incognito_phone = PhoneNumberField('incognito phone ', max_length=20, null=True, blank=True, db_index=True)
+    incognito_phone = PhoneNumberField('incognito phone ', max_length=20, null=True, blank=True, db_index=True)
 
     def __str__(self):
         if self.client:
             return f'{self.client.name} {self.client.tg_account}_{self.pk}'
         else:
             return \
-                # f'{self.incognito_phone}_{self.pk}'
+                f'{self.incognito_phone}_{self.pk}'
