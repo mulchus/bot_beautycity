@@ -5,3 +5,4 @@ aiogram~=2.25.1
 asgiref~=3.6.0
 requests~=2.28.2
 phonenumberslite==8.13.7
+django-phonenumber-field	7.1.0

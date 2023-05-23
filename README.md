@@ -11,15 +11,11 @@ https://t.me/BeautyCityBot
 Чтобы их определить, создайте файл `.env` рядом с `manage.py` и запишите туда данные в таком формате: `ПЕРЕМЕННАЯ = значение`:  
 - `SECRET_KEY` — секретный ключ проекта в Django. Например: `erofheronoirenfoernfx49389f43xf3984xf9384`.  
 - `DEBUG` — дебаг-режим. Поставьте `True`, чтобы увидеть отладочную информацию в случае ошибки. Выключается значением `False`.  
-- `ALLOWED_HOSTS` — по умолчанию: localhost и 127.0.0.1.  
+- `ALLOWED_HOSTS` — по умолчанию: localhost, 127.0.0.1.  
 - `DJANGO_SETTINGS_MODULE = 'bot_beautycity.settings'`
 [документация Django](https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts).
 
-`BOT_TOKEN = 'токен Вашего бота от Telegram'`. [Инструкция, как создать бота.](https://core.telegram.org/bots/features#botfather)
-`OWNER_ID = личный ID Telegram собственника студии` (выглядит как 123456789). Узнать можно следующим образом:  
-Добавьте в список контактов бота `@MyTelegramID_bot`.  
-Начните с ним диалог командой `/start`, в ответном сообщении вы узнаете цифры идентификатора.  
-Можете использовать также бота `@GetMyIDBot` или `@my_id_bot` для этой же цели.  
+- `BOT_TOKEN = 'токен Вашего бота от Telegram'`. [Инструкция, как создать бота.](https://core.telegram.org/bots/features#botfather)  
 
 [Документация для деплоя бота на сервере (при необходимости) - Django Deployment checklist](https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/). 
 
