@@ -1,23 +1,35 @@
 from django.contrib import admin
-from .models import Client, Schedule, Service, Order
+from .models import Client, Schedule, Service
+from rangefilter.filters import DateRangeFilter, DateTimeRangeFilter
 
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('tg_account', 'name',)  # 'phone')
-    search_fields = ['tg_account', 'name',]  # 'phone']
+    list_display = ('name', 'phone', 'tg_account')
+    search_fields = ['name', 'phone', 'tg_account']  # надо реализовать поиск без учета регистра!!!
 
     class Meta:
-        ordering = ('tg_account', )
+        ordering = ('name', )
+
+    # разобраться с этим позже - что за функционал?
+    def my_unicode(self):
+        return 'what ever you want to return'
+    Client.__unicode__ = my_unicode
 
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('service_type', 'cost')
+    list_display = ('service_name', 'cost')
+    search_fields = ['service_name', ]
 
 
-admin.site.register(Order)
-admin.site.register(Schedule)
+@admin.register(Schedule)
+class ScheduleAdmin(admin.ModelAdmin):
+    list_display = ('specialist', 'reception_datetime', 'client', 'service', 'incognito_phone')
+    list_filter = ('specialist', ('reception_datetime', DateRangeFilter))
+
+    class Meta:
+        ordering = ('reception_datetime', 'specialist', )  # почему то сортирует по времени, а не дате-времени!!!
 
 
 admin.site.site_header = 'Панель администратора'

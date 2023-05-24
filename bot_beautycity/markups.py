@@ -1,4 +1,6 @@
 from aiogram import types
+from admin_beautycity.models import Service
+
 
 # ======= CLIENT BLOCK (START) ==============================================================================
 client_start_markup = types.InlineKeyboardMarkup(row_width=2)
@@ -10,14 +12,14 @@ client_start_markup_buttons = [
 client_start_markup.add(*client_start_markup_buttons)
 
 get_service = types.InlineKeyboardMarkup(row_width=3)
-get_service_buttons = [
-    types.InlineKeyboardButton('Мейкап', callback_data='meikap'),
-    types.InlineKeyboardButton('Покраска волос', callback_data='hair_coloring'),
-    types.InlineKeyboardButton('Маникюр', callback_data='manicure'),
-    types.InlineKeyboardButton('Позвонить нам', callback_data='call_to_us'),
-    types.InlineKeyboardButton('<= Вернуться', callback_data='exit'),
-]
+services = Service.objects.all()
+get_service_buttons = []
+for service in services:
+    get_service_buttons.append(types.InlineKeyboardButton(service.service_name, callback_data=service.service_english))
+get_service_buttons.append(types.InlineKeyboardButton('Позвонить нам', callback_data='call_to_us'))
+get_service_buttons.append(types.InlineKeyboardButton('<= Вернуться', callback_data='exit'))
 get_service.add(*get_service_buttons)
+
 
 # здесь необходимо реализовать выбор даты-времени из какого то массива рабочего времени.
 choose_datetime = types.InlineKeyboardMarkup(row_width=2)

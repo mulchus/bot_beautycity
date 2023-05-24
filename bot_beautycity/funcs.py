@@ -10,7 +10,7 @@ import django
 
 django.setup()
 
-from admin_beautycity.models import Client, Order
+from admin_beautycity.models import Client, Schedule, Service
 
 
 dotenv.load_dotenv()
@@ -28,33 +28,43 @@ def registration_client(name, phone, tg_account, tg_id):
     Client.objects.create(name=name, phone=phone, tg_account=tg_account, tg_id=tg_id)
 
 
-def make_order(tg_account, service, schedule, incognito_phone=''):
+def make_order(schedule_id, tg_account, service, incognito_phone=''):
     client = Client.objects.get(tg_account=tg_account)
-    Order.objects.create(client=client, service=service, schedule=schedule, incognito_phone=incognito_phone)
+    Schedule.objects.filter(schedule_id=schedule_id).update(client=client, service=service,
+                                                            incognito_phone=incognito_phone)
 
 
-def get_client_orders(tg_account, id_client=None):
+def get_client_records(tg_account, id_client=None):
     client = Client.objects.get(tg_account=tg_account)
-    orders = Order.objects.filter(client=client)
+    records = Schedule.objects.filter(client=client)
     serialized_orders = []
-    for order in orders:
-        serialized_order = dict(client=tg_account, service=service, schedule=schedule,
-                                incognito_phone=incognito_phone)
+    for record in records:
+        serialized_order = dict(client=tg_account, service=record.service, specialist=record.specialist,
+                                reception_datetime=record.reception_datetime,
+                                incognito_phone=record.incognito_phone)
         serialized_orders.append(serialized_order)
     return serialized_orders
 
 
-def get_order(id_order):
-    order = Order.objects.filter(id=id_order)[0]
-    serialized_order = dict(client=order.client.tg_account, area=order.area, mass=order.mass,
-                            amount=order.amount, date_opened=order.date_opened, date_closed=order.date_closed,
-                            id=order.id)
+def get_record(record_id):
+    record = Schedule.objects.filter(id=record_id)[0]
+    serialized_order = dict(client=record.client.tg_account, service=record.service, specialist=record.specialist,
+                            reception_datetime=record.reception_datetime,
+                            incognito_phone=record.incognito_phone)
     return serialized_order
 
 
+# def get_service(service):
+#     service = Service.objects.filter(id=record_id)[0]
+#     serialized_order = dict(client=record.client.tg_account, service=record.service, specialist=record.specialist,
+#                             reception_datetime=record.reception_datetime,
+#                             incognito_phone=record.incognito_phone)
+#     return serialized_order
+
+
 def delete_order(id):
-    tg_id = Order.objects.get(id=id).client.tg_id
-    Order.objects.get(id=id).delete()
+    tg_id = Schedule.objects.get(id=id).client.tg_id
+    Schedule.objects.get(id=id).delete()
     return tg_id
 
 

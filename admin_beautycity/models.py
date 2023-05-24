@@ -1,48 +1,51 @@
-import datetime
-
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Client(models.Model):
-    name = models.CharField('client name', max_length=20)
-    phone = PhoneNumberField('client phone ', max_length=20, null=True, blank=True, db_index=True)
-    tg_account = models.CharField('client telegram account', max_length=32)
-    tg_id = models.IntegerField('client telegram_id for Bot', null=True, blank=True, unique=True)
-    
+    name = models.CharField('Имя', max_length=20)
+    phone = PhoneNumberField('Телефон', max_length=15, null=True, blank=True, db_index=True)
+    tg_account = models.CharField('Телеграм-Аккаунт', null=True, blank=True, max_length=32)
+    tg_id = models.IntegerField('Телеграм-ID', null=True, blank=True, unique=True)
+
+    class Meta:
+        verbose_name = 'Клиент'
+        verbose_name_plural = 'Клиенты'
+
     def __str__(self):
         return f'{self.name} {self.tg_account}'
 
     def status(self):
-        all_orders = Order.objects.filter(client=self)
-        return all_orders
-
-
-class Schedule(models.Model):
-    specialist = models.CharField('specialist', max_length=20)
-    datetime = models.DateTimeField('reception date and time', db_index=True)
-
-    def __str__(self):
-        return f'{self.specialist} {self.datetime}'
+        all_records = Schedule.objects.filter(client=self)
+        return all_records
 
 
 class Service(models.Model):
-    service_type = models.CharField('service type', max_length=30)
-    cost = models.FloatField('cost')
+    service_name = models.CharField('Название', max_length=30)
+    service_english = models.CharField('По_английски_через "_"', max_length=30, default=None)
+    cost = models.FloatField('Стоимость')
 
-
-class Order(models.Model):
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name='client',
-                               related_name='client_orders')
-    service = models.ForeignKey(Service, on_delete=models.DO_NOTHING, verbose_name='service',
-                                related_name='service_orders')
-    schedule = models.ForeignKey(Schedule, on_delete=models.DO_NOTHING, verbose_name='schedule',
-                                 related_name='schedule_orders')
-    incognito_phone = PhoneNumberField('incognito phone ', max_length=20, null=True, blank=True, db_index=True)
+    class Meta:
+        verbose_name = 'Услуга'
+        verbose_name_plural = 'Услуги'
 
     def __str__(self):
-        if self.client:
-            return f'{self.client.name} {self.client.tg_account}_{self.pk}'
-        else:
-            return \
-                f'{self.incognito_phone}_{self.pk}'
+        return f'{self.service_name} {self.cost}'
+
+
+class Schedule(models.Model):
+    specialist = models.CharField('Имя специалиста', max_length=20)
+    reception_datetime = models.DateTimeField('Время и дата приема', db_index=True)
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Клиент',
+                               related_name='client_records')
+    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Услуга',
+                                related_name='service_records')
+    incognito_phone = PhoneNumberField('Телефон клиента (без регистрации)', max_length=20, null=True, blank=True,
+                                       db_index=True)
+
+    class Meta:
+        verbose_name = 'Расписание'
+        verbose_name_plural = 'Расписания'
+
+    def __str__(self):
+        return f'{self.specialist} {self.reception_datetime}'
