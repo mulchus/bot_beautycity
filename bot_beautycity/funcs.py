@@ -16,10 +16,20 @@ from admin_beautycity.models import Client, Schedule, Service
 dotenv.load_dotenv()
 
 
-def get_records_number(tg_account: str):
+def get_records_count(tg_account):
     try:
-        records_number = Client.objects.get(tg_account=tg_account)
-        return records_number
+        client = Client.objects.get(tg_account=tg_account)
+        records = client.client_records.count()
+        return records
+    except Client.DoesNotExist:
+        return
+
+
+def get_client_id(tg_account):
+    print(f'tg_account {tg_account}')
+    try:
+        client = Client.objects.get(tg_account=tg_account)
+        return client.id
     except Client.DoesNotExist:
         return
 
@@ -34,16 +44,7 @@ def make_order(schedule_id, tg_account, service, incognito_phone=''):
                                                             incognito_phone=incognito_phone)
 
 
-def get_client_records(tg_account, id_client=None):
-    client = Client.objects.get(tg_account=tg_account)
-    records = Schedule.objects.filter(client=client)
-    serialized_orders = []
-    for record in records:
-        serialized_order = dict(client=tg_account, service=record.service, specialist=record.specialist,
-                                reception_datetime=record.reception_datetime,
-                                incognito_phone=record.incognito_phone)
-        serialized_orders.append(serialized_order)
-    return serialized_orders
+
 
 
 def get_record(record_id):
