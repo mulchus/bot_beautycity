@@ -30,19 +30,16 @@ logging.basicConfig(level=logging.INFO)
 
 
 class UserState(StatesGroup):
-    standby = State()
     service = State()
     specialist = State()
     datetime = State()
     registration = State()
-    name = State()
-    phone = State()
+    name_phone = State()
     phone_verification = State()
-    registration_completion = State()
     record_save = State()
 
 
-@dp.message_handler()
+@dp.message_handler(state=[UserState, None])
 async def start_conversation(msg: types.Message, state: FSMContext):
     messages_responses = []
     message = dedent("""  Добро пожаловать! 
@@ -80,13 +77,13 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
     except TypeError:
         pass
     await cb.message.answer('Выбор сервиса:', reply_markup=m.get_service)
-    await UserState.specialist.set()
+    await UserState.service.set()
     await cb.answer()
 
 
 @dp.callback_query_handler(Text([service for service in
                                  Service.objects.all().values_list('name_english', flat=True)]),
-                           state=UserState.specialist)
+                           state=UserState.service)
 async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
@@ -98,12 +95,12 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
     messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.name}" '
                                                                             f'стоит {service.cost} руб.'))
     await cb.message.answer('Выбор специалиста:', reply_markup=m.get_specialist)
-    await UserState.datetime.set()
+    await UserState.specialist.set()
 
 
 @dp.callback_query_handler(Text([specialist for specialist in
                                  Specialist.objects.all().values_list('name', flat=True)] + ['Любой']),
-                           state=UserState.datetime)
+                           state=UserState.specialist)
 async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     payloads = await state.get_data()
@@ -118,12 +115,12 @@ async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
         # И ЕСЛИ ВЫБРАН ЛЮБОЙ СПЕЦИАЛИСТ - ПОТОМ КОНКРЕТНОГО СОХРАНИТЬ В state
 
     await cb.message.answer('Выбор даты и времени:', reply_markup=m.choose_datetime)
-    await UserState.registration.set()
+    await UserState.datetime.set()
     await cb.answer()
 
 
 # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
-@dp.callback_query_handler(Text(['today', 'tomorrow']), state=UserState.registration)
+@dp.callback_query_handler(Text(['today', 'tomorrow']), state=UserState.datetime)
 async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     payloads = await state.get_data()
@@ -142,7 +139,7 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
                                                                       document=open(Path(BASE_DIR, 'permitted.pdf'),
                                                                                     'rb'),
                                                                       reply_markup=m.accept_personal_data))
-        await UserState.name.set()
+        await UserState.registration.set()
     else:
         await state.update_data(client_id=client_id)
         await UserState.record_save.set()
@@ -151,7 +148,7 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
-@dp.callback_query_handler(Text(['personal_yes', 'personal_no']), state=UserState.name)
+@dp.callback_query_handler(Text(['personal_yes', 'personal_no']), state=UserState.registration)
 async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     payloads = await state.get_data()
@@ -165,12 +162,12 @@ async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
         registration_consent = True
     await state.update_data(registration_consent=registration_consent)
     await cb.message.answer('Введите свое имя:')
-    await UserState.phone.set()
+    await UserState.name_phone.set()
     await cb.answer()
 
 
-@dp.message_handler(lambda msg: msg.text, state=UserState.phone)
-async def set_phone(msg: types.Message, state: FSMContext):
+@dp.message_handler(lambda msg: msg.text, state=UserState.name_phone)
+async def set_name_phone(msg: types.Message, state: FSMContext):
     await state.update_data(name=msg.text)
     await msg.answer('Введите свой телефон. Номер телефона необходимо ввести в формате: "+99999999999". '
                      'Допускается до 15 цифр.')
@@ -219,14 +216,10 @@ async def record_save(msg: types.Message, state: FSMContext):
 
     await sync_to_async(funcs.make_order)(chedule_id, client_id, payloads['service_id'], incognito_phone)
     await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
-                     f'к специалисту {payloads["specialist_name"]}! \n'  # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного
+                     # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
+                     f'к специалисту {payloads["specialist_name"]}! \n'                       
                      f'До встречи {chedule_date} в {chedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
-    await msg.answer('Главное меню', reply_markup=m.client_start_markup)
-
-
-@dp.message_handler(state=UserState.standby)
-async def incorrect_input_proceeding(msg: types.Message):
     await msg.answer('Главное меню', reply_markup=m.client_start_markup)
 
 
