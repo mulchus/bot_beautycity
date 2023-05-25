@@ -14,7 +14,7 @@ from aiogram.dispatcher.filters import Text
 from asgiref.sync import sync_to_async
 from pathlib import Path
 from textwrap import dedent
-from admin_beautycity.models import Client, Schedule, Service
+from admin_beautycity.models import Client, Schedule, Service, Specialist
 from phonenumber_field.phonenumber import PhoneNumber
 from phonenumbers.phonenumberutil import NumberParseException
 
@@ -32,6 +32,7 @@ logging.basicConfig(level=logging.INFO)
 class UserState(StatesGroup):
     standby = State()
     service = State()
+    specialist = State()
     datetime = State()
     registration = State()
     name = State()
@@ -61,9 +62,10 @@ async def start_conversation(msg: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(text="exit", state=[UserState, None])
-async def exit_client_proceeding(cb: types.CallbackQuery):
+async def exit_client_proceeding(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     await cb.message.answer('Главное меню', reply_markup=m.client_start_markup)
+    await state.reset_state(with_data=False)
     await cb.answer()
 
 
@@ -77,41 +79,47 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(messages_responses=[])
     except TypeError:
         pass
-    await cb.message.answer('Выбор сервиса', reply_markup=m.get_service)
-    await UserState.datetime.set()
+    await cb.message.answer('Выбор сервиса:', reply_markup=m.get_service)
+    await UserState.specialist.set()
     await cb.answer()
 
 
 @dp.callback_query_handler(Text([service for service in
                                  Service.objects.all().values_list('name_english', flat=True)]),
-                           state=UserState.datetime)
+                           state=UserState.specialist)
 async def set_service(cb: types.CallbackQuery, state: FSMContext):
+    await cb.message.delete()
     await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
+
     async for service in Service.objects.filter(name_english=cb.data):  # результат - одно значение!
         await state.update_data(service_id=service.pk)
         await state.update_data(service_name=service.name)
-    await cb.message.delete()
     messages_responses = await state.get_data('messages_responses')
     messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.name}" '
                                                                             f'стоит {service.cost} руб.'))
+    await cb.message.answer('Выбор специалиста:', reply_markup=m.get_specialist)
+    await UserState.datetime.set()
 
-    # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
 
-    await cb.message.answer('Выбор даты и времени', reply_markup=m.choose_datetime)
+@dp.callback_query_handler(Text([specialist for specialist in
+                                 Specialist.objects.all().values_list('name', flat=True)] + ['Любой']),
+                           state=UserState.datetime)
+async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
+    await cb.message.delete()
+    payloads = await state.get_data()
+    for message in payloads['messages_responses']:
+        await message.delete()
+
+    async for specialist in Specialist.objects.filter(name=cb.data):  # результат - одно значение!
+        await state.update_data(specialist_id=specialist.pk)
+        await state.update_data(specialist_name=specialist.name)
+
+        # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
+        # И ЕСЛИ ВЫБРАН ЛЮБОЙ СПЕЦИАЛИСТ - ПОТОМ КОНКРЕТНОГО СОХРАНИТЬ В state
+
+    await cb.message.answer('Выбор даты и времени:', reply_markup=m.choose_datetime)
     await UserState.registration.set()
     await cb.answer()
-
-
-@dp.callback_query_handler(Text([service for service in
-                                 Service.objects.all().values_list('name_english', flat=True)]),
-                           state=UserState.datetime)
-async def set_service(cb: types.CallbackQuery, state: FSMContext):
-    await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
-    async for service in Service.objects.filter(name_english=cb.data):  # результат - одно значение!
-        await state.update_data(service_id=service.pk)
-        await state.update_data(service_name=service.name)
-    await cb.message.delete()
-
 
 
 # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
@@ -210,7 +218,8 @@ async def record_save(msg: types.Message, state: FSMContext):
     incognito_phone = payloads['incognito_phone']
 
     await sync_to_async(funcs.make_order)(chedule_id, client_id, payloads['service_id'], incognito_phone)
-    await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}"! \n'
+    await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
+                     f'к специалисту {payloads["specialist_name"]}! \n'  # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного
                      f'До встречи {chedule_date} в {chedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
     await msg.answer('Главное меню', reply_markup=m.client_start_markup)
