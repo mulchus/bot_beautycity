@@ -21,8 +21,8 @@ class Client(models.Model):
 
 
 class Service(models.Model):
-    service_name = models.CharField('Название', max_length=30)
-    service_english = models.CharField('По_английски_через "_"', max_length=30, default=None)
+    name = models.CharField('Название', max_length=30)
+    name_english = models.CharField('По_английски_через "_"', max_length=30, default=None)
     cost = models.FloatField('Стоимость')
 
     class Meta:
@@ -30,11 +30,24 @@ class Service(models.Model):
         verbose_name_plural = 'Услуги'
 
     def __str__(self):
-        return f'{self.service_name} {self.cost}'
+        return f'{self.name} {self.cost}'
+
+
+class Specialist(models.Model):
+    name = models.CharField('Имя специалиста', max_length=20)
+    phone = PhoneNumberField('Телефон специалиста', max_length=20, null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Специалист'
+        verbose_name_plural = 'Специалисты'
+
+    def __str__(self):
+        return f'{self.name} {self.phone}'
 
 
 class Schedule(models.Model):
-    specialist = models.CharField('Имя специалиста', max_length=20)
+    specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name='Специалист', related_name='specialist_records')
     reception_datetime = models.DateTimeField('Время и дата приема', db_index=True)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Клиент',
                                related_name='client_records')

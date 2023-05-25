@@ -1,6 +1,12 @@
 from django.contrib import admin
-from .models import Client, Schedule, Service
+from .models import Client, Schedule, Service, Specialist
 from rangefilter.filters import DateRangeFilter, DateTimeRangeFilter
+
+
+@admin.register(Specialist)
+class SpecialistAdmin(admin.ModelAdmin):
+    list_display = ('name', 'phone')
+    search_fields = ['name', 'phone']  # надо реализовать поиск без учета регистра!!!
 
 
 @admin.register(Client)
@@ -19,14 +25,14 @@ class ClientAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('service_name', 'cost')
-    search_fields = ['service_name', ]
+    list_display = ('name', 'cost')
+    search_fields = ['name', ]
 
 
 @admin.register(Schedule)
 class ScheduleAdmin(admin.ModelAdmin):
     list_display = ('specialist', 'reception_datetime', 'client', 'service', 'incognito_phone')
-    list_filter = ('specialist', ('reception_datetime', DateRangeFilter))
+    list_filter = ('specialist', 'service', ('reception_datetime', DateTimeRangeFilter))
 
     class Meta:
         ordering = ('reception_datetime', 'specialist', )  # почему то сортирует по времени, а не дате-времени!!!

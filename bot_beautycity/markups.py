@@ -15,7 +15,7 @@ get_service = types.InlineKeyboardMarkup(row_width=2)
 services = Service.objects.all()
 get_service_buttons = []
 for service in services:
-    get_service_buttons.append(types.InlineKeyboardButton(service.service_name, callback_data=service.service_english))
+    get_service_buttons.append(types.InlineKeyboardButton(service.name, callback_data=service.name_english))
 get_service_buttons.append(types.InlineKeyboardButton('Позвонить нам', callback_data='call_to_us'))
 get_service_buttons.append(types.InlineKeyboardButton('<= Вернуться', callback_data='exit'))
 get_service.add(*get_service_buttons)

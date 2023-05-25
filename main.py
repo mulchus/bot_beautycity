@@ -82,17 +82,17 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
-@dp.callback_query_handler(Text([service for service in Service.objects.all().values_list('service_english',
-                                                                                          flat=True)]),
+@dp.callback_query_handler(Text([service for service in
+                                 Service.objects.all().values_list('name_english', flat=True)]),
                            state=UserState.datetime)
 async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
-    async for service in Service.objects.filter(service_english=cb.data):  # результат - одно значение!
+    async for service in Service.objects.filter(name_english=cb.data):  # результат - одно значение!
         await state.update_data(service_id=service.pk)
-        await state.update_data(service_name=service.service_name)
+        await state.update_data(service_name=service.name)
     await cb.message.delete()
     messages_responses = await state.get_data('messages_responses')
-    messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.service_name}" '
+    messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.name}" '
                                                                             f'стоит {service.cost} руб.'))
 
     # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
@@ -100,6 +100,18 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.answer('Выбор даты и времени', reply_markup=m.choose_datetime)
     await UserState.registration.set()
     await cb.answer()
+
+
+@dp.callback_query_handler(Text([service for service in
+                                 Service.objects.all().values_list('name_english', flat=True)]),
+                           state=UserState.datetime)
+async def set_service(cb: types.CallbackQuery, state: FSMContext):
+    await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
+    async for service in Service.objects.filter(name_english=cb.data):  # результат - одно значение!
+        await state.update_data(service_id=service.pk)
+        await state.update_data(service_name=service.name)
+    await cb.message.delete()
+
 
 
 # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
@@ -211,7 +223,7 @@ async def incorrect_input_proceeding(msg: types.Message):
 
 @dp.callback_query_handler(text="call_to_us", state=['*'])
 async def call_to_us_message(cb: types.CallbackQuery):
-    await cb.message.answer('Рады Вашему звонку в любое время – 88005553535')
+    await cb.message.answer('Рады Вашему звонку в любое время – +7(800)555-35-35')
     await cb.answer()
 
 
