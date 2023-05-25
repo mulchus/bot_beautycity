@@ -5,7 +5,6 @@ import asyncio
 from bot_beautycity import funcs
 from bot_beautycity import markups as m
 import logging
-import django.db.utils
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.utils import executor
@@ -53,7 +52,7 @@ async def start_conversation(msg: types.Message, state: FSMContext):
     records_count = await sync_to_async(funcs.get_records_count)(msg.from_user.username)
     if records_count:
         message = await msg.answer(f'С возвращением, {msg.from_user.first_name}. '
-                                    f'У Вас уже было записей: {records_count}.')
+                                   f'У Вас уже было записей: {records_count}.')
     else:
         message = await msg.answer(f'Здравствуйте, {msg.from_user.first_name}.')
     messages_responses.append(message)
@@ -83,21 +82,25 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
     await cb.answer()
 
 
-@dp.callback_query_handler(Text([service for service in Service.objects.all().values_list('service_english', flat=True)]),
+@dp.callback_query_handler(Text([service for service in Service.objects.all().values_list('service_english',
+                                                                                          flat=True)]),
                            state=UserState.datetime)
 async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await state.update_data(tg_id=cb.from_user.id)  # сохраняем tg_id кто кликнул
     async for service in Service.objects.filter(service_english=cb.data):  # результат - одно значение!
         await state.update_data(service_id=service.pk)
+        await state.update_data(service_name=service.service_name)
     await cb.message.delete()
     messages_responses = await state.get_data('messages_responses')
-    messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.service_name}" стоит {service.cost} руб.'))
+    messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.service_name}" '
+                                                                            f'стоит {service.cost} руб.'))
 
-                                        # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
+    # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
 
     await cb.message.answer('Выбор даты и времени', reply_markup=m.choose_datetime)
     await UserState.registration.set()
     await cb.answer()
+
 
 # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
 @dp.callback_query_handler(Text(['today', 'tomorrow']), state=UserState.registration)
@@ -106,26 +109,13 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     payloads = await state.get_data()
     for message in payloads['messages_responses']:
         await message.delete()
-
-    # client = await sync_to_async(Client.objects.get)(tg_id=cb.from_user.id)
     client_id = await sync_to_async(funcs.get_client_id)(cb.from_user.username)
-    await sync_to_async(print)(f'this_client_id {client_id}')
     if not client_id:
-        # x = await sync_to_async(funcs.get_client_id)(cb.from_user.id)
-        # await sync_to_async(print)(f'get_client_id - {x}')
-
-        # Client.objects.filter(tg_id=payloads['user_id']):
-        # await sync_to_async(print)(f'Клиент {client}')
-
-
         # клиент зарегистрирован? проверка и далее - флаг и запрос номера телефона
         # если не зарегистрирован
         await state.update_data(client_id=None)
-        # messages_responses = data['messages_responses']
-
         payloads['messages_responses'].append(await cb.message.answer('Предлагаем Вам зарегистрироваться в нашей базе. '
                                                                       'Получите скидку 5%.'))
-
         payloads['messages_responses'].append(await cb.message.answer('Для регистрации ознакомьтесь с согласием '
                                                                       'на обработку персональных данных.'))
         payloads['messages_responses'].append(await bot.send_document(chat_id=cb.from_user.id,
@@ -135,17 +125,14 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         await UserState.name.set()
     else:
         await state.update_data(client_id=client_id)
-        await cb.message.answer('Это месадж после + проверки')
-        await sync_to_async(print)(f'Это строка после + проверки')
         await UserState.record_save.set()
         await state.update_data(incognito_phone=None)
         await record_save(cb.message, state)
     await cb.answer()
 
 
-@dp.callback_query_handler(Text(['personal_yes', 'personal_no']), state=[UserState.name])
+@dp.callback_query_handler(Text(['personal_yes', 'personal_no']), state=UserState.name)
 async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
-    await sync_to_async(print)(f'Это вторая строка после проверки')
     await cb.message.delete()
     payloads = await state.get_data()
     for message in payloads['messages_responses']:
@@ -164,7 +151,6 @@ async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
 
 @dp.message_handler(lambda msg: msg.text, state=UserState.phone)
 async def set_phone(msg: types.Message, state: FSMContext):
-    # сохранение имени в памяти
     await state.update_data(name=msg.text)
     await msg.answer('Введите свой телефон. Номер телефона необходимо ввести в формате: "+99999999999". '
                      'Допускается до 15 цифр.')
@@ -174,26 +160,28 @@ async def set_phone(msg: types.Message, state: FSMContext):
 @dp.message_handler(lambda msg: msg.text, state=UserState.phone_verification)
 async def phone_verification(msg: types.Message, state: FSMContext):
     try:
-        phone_check = PhoneNumber.from_string(msg.text, 'RU').is_valid()
+        phone = PhoneNumber.from_string(msg.text, 'RU')
+        phone_check = phone.is_valid()
     except NumberParseException:
         await msg.answer('Некорректно введен телефон! Попробуйте еще раз.')
         return
     if not phone_check:
         await msg.answer('Некорректно введен телефон! Проверьте формат. Попробуйте еще раз.')
         return
-    phone_as_e164 = PhoneNumber.from_string(msg.text, "RU").as_e164
+    phone_as_e164 = phone.as_e164
     await msg.answer(f'Телефон введен корректно! {phone_as_e164}')
 
     payloads = await state.get_data()
     incognito_phone = ''
-    if payloads['registration_consent']:  # если дал согласие на регистрацию - регистрируем в БД
-        # сохранение юзера в БД
-        await sync_to_async(funcs.registration_client)(payloads['name'], phone_as_e164,
-                                                       msg.from_user.username, msg.from_user.id)
+    if payloads['registration_consent']:  # если дал согласие на регистрацию - сохранение юзера в БД
+        client = await sync_to_async(funcs.registration_client)(payloads['name'], phone_as_e164,
+                                                                msg.from_user.username, msg.from_user.id)
+        await state.update_data(client_id=client.pk)
     else:
         incognito_phone = phone_as_e164
     await state.update_data(incognito_phone=incognito_phone)
     await UserState.record_save.set()
+    await record_save(msg, state)
 
 
 @dp.message_handler(state=UserState.record_save)
@@ -206,20 +194,17 @@ async def record_save(msg: types.Message, state: FSMContext):
     chedule_time = '15:45'
 
     payloads = await state.get_data()
-
     client_id = payloads['client_id']
     incognito_phone = payloads['incognito_phone']
 
     await sync_to_async(funcs.make_order)(chedule_id, client_id, payloads['service_id'], incognito_phone)
-    await msg.answer(f'Спасибо, Вы записаны! '
+    await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}"! \n'
                      f'До встречи {chedule_date} в {chedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
-
-    await sync_to_async(print)(payloads)
-    await state.finish()
+    await state.reset_state(with_data=False)
     await msg.answer('Главное меню', reply_markup=m.client_start_markup)
 
 
-@dp.message_handler(state=[UserState.standby])
+@dp.message_handler(state=UserState.standby)
 async def incorrect_input_proceeding(msg: types.Message):
     await msg.answer('Главное меню', reply_markup=m.client_start_markup)
 
@@ -232,7 +217,6 @@ async def call_to_us_message(cb: types.CallbackQuery):
 
 async def sentinel():
     while 1:
-        # print(sys.path)
         logging.info('Какая то проверка в течении какого то периода')
         await asyncio.sleep(86400)
 
