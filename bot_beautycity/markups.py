@@ -11,7 +11,7 @@ client_start_markup_buttons = [
 ]
 client_start_markup.add(*client_start_markup_buttons)
 
-get_service = types.InlineKeyboardMarkup(row_width=3)
+get_service = types.InlineKeyboardMarkup(row_width=2)
 services = Service.objects.all()
 get_service_buttons = []
 for service in services:

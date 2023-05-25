@@ -26,25 +26,25 @@ def get_records_count(tg_account):
 
 
 def get_client_id(tg_account):
-    print(f'tg_account {tg_account}')
     try:
         client = Client.objects.get(tg_account=tg_account)
-        return client.id
+        return client.pk
     except Client.DoesNotExist:
         return
 
 
 def registration_client(name, phone, tg_account, tg_id):
-    Client.objects.create(name=name, phone=phone, tg_account=tg_account, tg_id=tg_id)
+    try:
+        Client.objects.create(name=name, phone=phone, tg_account=tg_account, tg_id=tg_id)
+    except django.db.utils.IntegrityError:
+        pass
 
 
-def make_order(schedule_id, tg_account, service, incognito_phone=''):
-    client = Client.objects.get(tg_account=tg_account)
-    Schedule.objects.filter(schedule_id=schedule_id).update(client=client, service=service,
-                                                            incognito_phone=incognito_phone)
+def make_order(schedule_id, client_id, service_id, incognito_phone=''):
 
-
-
+    # client = Client.objects.get(tg_account=tg_account)
+    Schedule.objects.filter(id=schedule_id).update(client=client_id, service=service_id,
+                                                   incognito_phone=incognito_phone)
 
 
 def get_record(record_id):
