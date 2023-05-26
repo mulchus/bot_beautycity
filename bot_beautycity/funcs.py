@@ -3,6 +3,7 @@ import dotenv
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bot_beautycity.settings')
+# os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 django.setup()
 
 from admin_beautycity.models import Client, Schedule

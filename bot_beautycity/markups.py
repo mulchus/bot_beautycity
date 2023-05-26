@@ -8,7 +8,7 @@ ADDITIONAL_BUTTONS = [CALL_TO_US, EXIT, ]
 client_start_markup = types.InlineKeyboardMarkup(row_width=2)
 client_start_markup_buttons = [
     types.InlineKeyboardButton('О нас', url='https://telegra.ph/O-salonah-krasoty-BeautyCity-05-23'),
-    types.InlineKeyboardButton('Записаться на услугу', callback_data='get_service'),
+    types.InlineKeyboardButton('Записаться на услугу', callback_data='choice_service'),
     CALL_TO_US,
 ]
 client_start_markup.add(*client_start_markup_buttons)
