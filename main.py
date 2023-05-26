@@ -129,7 +129,8 @@ async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     if schedule:
         await state.update_data(schedule_id=schedule.pk)
     else:
-        await cb.message.answer('К этому специалисту нет записи, выберите другого.')
+        await cb.message.answer('К этому специалисту нет записи, выберите другого.', reply_markup=m.get_specialist)
+        # await asyncio.sleep(3)
         return
 
     await cb.message.answer('Выбор даты и времени:', reply_markup=m.choose_datetime)
@@ -224,7 +225,7 @@ async def record_save(msg: types.Message, state: FSMContext):
 
     # нужно из введенных пользователем даты и времени сделать проверку их наличия свободных в расписании и оттуда взять
     # chedule_id
-    chedule_id = 2  # временно
+    # schedule_id = 2  # временно
     schedule_date = '2022-02-02'
     schedule_time = '15:45'
 
@@ -239,7 +240,7 @@ async def record_save(msg: types.Message, state: FSMContext):
     await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
                      # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
                      f'к специалисту {payloads["specialist_name"]}! \n'                       
-                     f'До встречи {chedule_date} в {chedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
+                     f'До встречи {schedule_date} в {schedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
     await msg.answer('Главное меню', reply_markup=m.client_start_markup)
 
