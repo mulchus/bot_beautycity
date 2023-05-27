@@ -35,7 +35,7 @@ class ServiceAdmin(admin.ModelAdmin):
 def schedule_set_day(set_day):
     specialists = Specialist.objects.all()
     for specialist in specialists:
-        next_datetime = datetime.combine(set_day, EIGHT_HOURS, tzinfo=pytz.timezone('Europe/Moscow'))
+        next_datetime = datetime.combine(set_day, EIGHT_HOURS)
         for reception in range(24):
             Schedule.objects.get_or_create(specialist=specialist, reception_datetime=next_datetime)
             next_datetime += THIRTY_MINUTES
