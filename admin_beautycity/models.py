@@ -55,6 +55,7 @@ class Schedule(models.Model):
                                 related_name='service_records')
     incognito_phone = PhoneNumberField('Телефон клиента (отказ регистрации)', max_length=20, null=True, blank=True,
                                        db_index=True)
+    payed = models.BooleanField('Оплачено?', default=False)
 
     class Meta:
         verbose_name = 'Расписание'

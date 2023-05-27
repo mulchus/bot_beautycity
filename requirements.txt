@@ -8,3 +8,4 @@ phonenumberslite==8.13.7
 django-phonenumber-field==7.1.0
 django-admin-rangefilter==0.10.0
 django-object-actions==4.1.0
+aiogram_calendar==0.1.1

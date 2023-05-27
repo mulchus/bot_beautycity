@@ -17,11 +17,14 @@ from textwrap import dedent
 from admin_beautycity.models import Client, Schedule, Service, Specialist
 from phonenumber_field.phonenumber import PhoneNumber
 from phonenumbers.phonenumberutil import NumberParseException
-
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup
+from aiogram_calendar import simple_cal_callback, SimpleCalendar
+from aiogram.types.message import ContentType
 
 BASE_DIR = Path(__file__).resolve().parent
 dotenv.load_dotenv(Path(BASE_DIR, '.env'))
 token = os.environ['BOT_TOKEN']
+PAYMENT_TOKEN = os.environ['PAYMENT_TOKEN']
 
 bot = Bot(token=token)
 storage = MemoryStorage()
@@ -244,6 +247,76 @@ async def record_save(state: FSMContext):
                                   f'МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
     await bot.send_message(tg_id, 'Главное меню', reply_markup=m.client_start_markup)
+
+
+# buy
+@dp.message_handler(Text(equals=['Buy'], ignore_case=True))
+async def buy(message: types.Message):
+    if PAYMENT_TOKEN.split(':')[1] == 'TEST':
+        await bot.send_message(message.chat.id, 'Test payment!!!')
+
+    price = types.LabeledPrice(label='Subscribe 1 month', amount=300*100)
+    await bot.send_invoice(message.chat.id,
+                           title='Bot subscribe',
+                           description='Bot activation for 1 month',
+                           provider_token=PAYMENT_TOKEN,
+                           currency='rub',
+                           photo_url="https://www.aroged.com/wp-content/uploads/2022/06/Telegram-has-a-premium-subscription.jpg",
+                           photo_width=416,
+                           photo_height=234,
+                           photo_size=416,
+                           is_flexible=False,
+                           prices=[price],
+                           start_parameter='one-month-subscription',
+                           payload='test-invoice-payload')
+
+
+# pre checkout (must be answered in 10 seconds)
+@dp.pre_checkout_query_handler(lambda query: True)
+async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+
+
+# successfull payment
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def successful_payment(message: types.Message):
+    schedule_id = 1
+    print('Successful_payment:')
+    payment_info = message.successful_payment.to_python()
+    for k, v in payment_info.items():
+        print(f'{k} = {v}')
+
+    await bot.send_message(message.chat.id,
+                           f'Payment at {message.successful_payment.total_amount // 100} {message.successful_payment.currency} done')
+    await sync_to_async(funcs.pay_order)(schedule_id)
+
+
+@dp.message_handler(Text(equals=['Calendar'], ignore_case=True))
+async def nav_cal_handler(message: Message):
+    await message.answer("Please select a date: ", reply_markup=await SimpleCalendar().start_calendar())
+
+
+# simple calendar usage
+@dp.callback_query_handler(simple_cal_callback.filter())
+async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
+    selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+    if selected:
+        await callback_query.message.answer(
+            f'Вы выбрали {date.strftime("%d/%m/%Y")}, выберите удобное время:',
+        )
+        order_dates = await sync_to_async(funcs.get_datetime)(date)
+        markup = types.InlineKeyboardMarkup(row_width=4)
+        possible_time = []
+        for i, order in enumerate(order_dates):
+            if order != 0:
+                if i % 2:
+                    minutes = '30'
+                else:
+                    minutes = '00'
+                time_window = f'{8 + i // 2} : {minutes}'
+                possible_time.append(types.InlineKeyboardButton(time_window, callback_data=i))
+        markup.add(*possible_time)
+        await callback_query.message.answer('Возможное время:', reply_markup=markup)
 
 
 async def sentinel():
