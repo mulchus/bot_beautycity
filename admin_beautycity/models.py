@@ -13,7 +13,7 @@ class Client(models.Model):
         verbose_name_plural = 'Клиенты'
 
     def __str__(self):
-        return f'{self.name} {self.tg_account}'
+        return f'{self.name} {self.phone}'
 
     def status(self):
         all_records = Schedule.objects.filter(client=self)
@@ -48,12 +48,12 @@ class Specialist(models.Model):
 class Schedule(models.Model):
     specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True, blank=True,
                                    verbose_name='Специалист', related_name='specialist_records')
-    reception_datetime = models.DateTimeField('Время и дата приема', db_index=True)
+    reception_datetime = models.DateTimeField('Дата и время приема', db_index=True)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Клиент',
                                related_name='client_records')
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Услуга',
                                 related_name='service_records')
-    incognito_phone = PhoneNumberField('Телефон клиента (без регистрации)', max_length=20, null=True, blank=True,
+    incognito_phone = PhoneNumberField('Телефон клиента (отказ регистрации)', max_length=20, null=True, blank=True,
                                        db_index=True)
 
     class Meta:

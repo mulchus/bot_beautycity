@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_beautycity',
     'rangefilter',
+    'django_object_actions',
 ]
 
 MIDDLEWARE = [

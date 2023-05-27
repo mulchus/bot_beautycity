@@ -113,10 +113,15 @@ async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     payloads = await state.get_data()
     for message in payloads['messages_responses']:
         await message.delete()
+    if cb.data == 'Любой':
+        await state.update_data(specialist_id=None)  # при выборе "Любой" ID специалиста None
+        await state.update_data(specialist_name=None)
 
-    async for specialist in Specialist.objects.filter(name=cb.data):  # результат - одно значение!
-        await state.update_data(specialist_id=specialist.pk)
-        await state.update_data(specialist_name=specialist.name)
+
+    else:
+        async for specialist in Specialist.objects.filter(name=cb.data):  # результат - одно значение!
+            await state.update_data(specialist_id=specialist.pk)
+            await state.update_data(specialist_name=specialist.name)
 
         # ЗДЕСЬ НАДО ВСТАВИТЬ ВЫБОР ИЗ КАЛЕНДАРЯ!
         # И ЕСЛИ ВЫБРАН ЛЮБОЙ СПЕЦИАЛИСТ - ПОТОМ КОНКРЕТНОГО СОХРАНИТЬ В state
