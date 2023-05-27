@@ -17,7 +17,6 @@ from textwrap import dedent
 from admin_beautycity.models import Client, Schedule, Service, Specialist
 from phonenumber_field.phonenumber import PhoneNumber
 from phonenumbers.phonenumberutil import NumberParseException
-from django.db.models import Q
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -37,7 +36,6 @@ class UserState(StatesGroup):
     get_registration = State()
     set_name_phone = State()
     phone_verification = State()
-    record_save = State()
 
 
 @dp.message_handler()
@@ -117,7 +115,6 @@ async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(specialist_id=None)  # при выборе "Любой" ID специалиста None
         await state.update_data(specialist_name=None)
 
-
     else:
         async for specialist in Specialist.objects.filter(name=cb.data):  # результат - одно значение!
             await state.update_data(specialist_id=specialist.pk)
@@ -166,9 +163,8 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         await UserState.get_registration.set()
     else:
         await state.update_data(client_id=client_id)
-        await UserState.record_save.set()
         await state.update_data(incognito_phone=None)
-        await record_save(cb.message, state)
+        await record_save(state)
     await cb.answer()
 
 
@@ -221,12 +217,10 @@ async def phone_verification(msg: types.Message, state: FSMContext):
     else:
         incognito_phone = phone_as_e164
     await state.update_data(incognito_phone=incognito_phone)
-    await UserState.record_save.set()
-    await record_save(msg, state)
+    await record_save(state)
 
 
-@dp.message_handler(state=UserState.record_save)
-async def record_save(msg: types.Message, state: FSMContext):
+async def record_save(state: FSMContext):
 
     # нужно из введенных пользователем даты и времени сделать проверку их наличия свободных в расписании и оттуда взять
     # chedule_id
@@ -235,6 +229,7 @@ async def record_save(msg: types.Message, state: FSMContext):
     schedule_time = '15:45'
 
     payloads = await state.get_data()
+    tg_id = payloads['tg_id']
     client_id = payloads['client_id']
     schedule_id = payloads['schedule_id']
     incognito_phone = payloads['incognito_phone']
@@ -242,12 +237,13 @@ async def record_save(msg: types.Message, state: FSMContext):
     await sync_to_async(print)(schedule_id)
 
     await sync_to_async(funcs.make_order)(schedule_id, client_id, payloads['service_id'], incognito_phone)
-    await msg.answer(f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
-                     # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
-                     f'к специалисту {payloads["specialist_name"]}! \n'                       
-                     f'До встречи {schedule_date} в {schedule_time} по адресу: МО, Балашиха, штабс DEVMAN”')
+    await bot.send_message(tg_id, f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
+                                  # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
+                                  f'к специалисту {payloads["specialist_name"]}! \n'                       
+                                  f'До встречи {schedule_date} в {schedule_time} по адресу: '
+                                  f'МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
-    await msg.answer('Главное меню', reply_markup=m.client_start_markup)
+    await bot.send_message(tg_id, 'Главное меню', reply_markup=m.client_start_markup)
 
 
 async def sentinel():

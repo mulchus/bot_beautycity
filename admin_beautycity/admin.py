@@ -20,16 +20,10 @@ class SpecialistAdmin(admin.ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone', 'tg_account')
-    search_fields = ['name', 'phone', 'tg_account']  # надо реализовать поиск без учета регистра!!!
+    search_fields = ['name', 'phone', 'tg_account']
 
     class Meta:
         ordering = ('name', )
-
-    # разобраться с этим позже - что за функционал?
-    @staticmethod
-    def my_unicode():
-        return 'what ever you want to return'
-    Client.__unicode__ = my_unicode
 
 
 @admin.register(Service)
@@ -54,7 +48,7 @@ class ScheduleAdmin(DjangoObjectActions, admin.ModelAdmin):
     ordering = ('reception_datetime', )
 
     @action(label='Расписать последующий день', description='По всем специалистам, начиная со следующей '
-                                                          'после последней даты')
+                                                            'после последней даты')
     def schedule_next_day(self, request, obj):
         last_shedule = Schedule.objects.all().order_by('-reception_datetime', 'pk')[0]
         schedule_set_day(last_shedule.reception_datetime + timedelta(1))
