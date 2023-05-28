@@ -342,7 +342,7 @@ async def buy(cb: types.CallbackQuery, state: FSMContext):
         photo_size=416,
         is_flexible=False,
         prices=[price],
-        start_parameter=txt,
+        start_parameter='test',
         payload='test-invoice-payload'
     )
 
@@ -361,7 +361,7 @@ async def successful_payment(message: types.Message, state: FSMContext):
     await bot.send_message(
         message.chat.id,
         f'Payment at {message.successful_payment.total_amount // 100}'
-        '{message.successful_payment.currency} done'
+        f'{message.successful_payment.currency} done'
     )
     await sync_to_async(funcs.pay_order)(payloads['schedule_id'])
     await state.reset_state(with_data=False)
