@@ -74,6 +74,7 @@ async def exit_client_proceeding(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     await cb.message.answer('Main menu', reply_markup=m.client_start_markup)
     await state.reset_state(with_data=False)
+    await state.update_data(registration_consent=False)
     await cb.answer()
 
 
@@ -102,7 +103,7 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query_handler(
     Text([service for service in Service.objects.all().values_list(
-        'name_english', flat=True
+        'name', flat=True
     )]),
     state=UserState.choice_service
 )
@@ -110,7 +111,7 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     await state.update_data(tg_id=cb.from_user.id)
 
-    async for service in Service.objects.filter(name_english=cb.data):
+    async for service in Service.objects.filter(name=cb.data):
         await state.update_data(service_id=service.pk)
         await state.update_data(service_name=service.name)
         await state.update_data(service_cost=service.cost)
@@ -216,6 +217,7 @@ async def set_name_phone(msg: types.Message, state: FSMContext):
     await UserState.phone_verification.set()
 
 
+
 @dp.message_handler(lambda msg: msg.text, state=UserState.phone_verification)
 async def phone_verification(msg: types.Message, state: FSMContext):
     try:
@@ -284,6 +286,7 @@ async def record_save(state: FSMContext):
 @dp.callback_query_handler(Text(['final']), state=[UserState, None])
 async def final(cb: types.CallbackQuery, state: FSMContext):
     await state.reset_state(with_data=False)
+    await state.update_data(registration_consent=False)
     await bot.delete_message(
         chat_id=cb.from_user.id,
         message_id=cb.message.message_id
@@ -294,10 +297,14 @@ async def final(cb: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(Text(['buy']), state=[UserState, None])
 async def buy(cb: types.CallbackQuery, state: FSMContext):
     payloads = await state.get_data()
+    if payloads['registration_consent']:
+        amount = int(payloads['service_cost']) * 95
+    else:
+        amount = int(payloads['service_cost']) * 100
     txt = payloads['service_name']
     price = types.LabeledPrice(
         label=txt,
-        amount=int(payloads['service_cost']) * 100
+        amount=amount
     )
     await bot.send_invoice(
         cb.message.chat.id,
@@ -334,6 +341,8 @@ async def successful_payment(message: types.Message, state: FSMContext):
     )
     await sync_to_async(funcs.pay_order)(payloads['schedule_id'])
     await state.reset_state(with_data=False)
+    await state.update_data(registration_consent=False)
+    await message.answer('Main menu', reply_markup=m.client_start_markup)
 
 
 @dp.callback_query_handler(Text(['calendar']), state=UserState.choice_datetime)

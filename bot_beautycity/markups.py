@@ -24,7 +24,7 @@ get_service = types.InlineKeyboardMarkup(row_width=2)
 services = Service.objects.all()
 get_service_buttons = [types.InlineKeyboardButton(
     service.name,
-    callback_data=service.name_english
+    callback_data=service.name
 ) for service in services] + ADDITIONAL_BUTTONS
 get_service.add(*get_service_buttons)
 
@@ -64,11 +64,7 @@ accept_personal_data.add(*accept_personal_data_buttons)
 final_markup = types.InlineKeyboardMarkup(row_width=2)
 final_markup_buttons = [
     types.InlineKeyboardButton('Pay the order', callback_data='buy'),
-    types.InlineKeyboardButton(
-        'Close bot',
-        callback_data='final'
-    ),
-]
+] + ADDITIONAL_BUTTONS
 final_markup.add(*final_markup_buttons)
 
 exit_markup = types.InlineKeyboardMarkup(row_width=1)

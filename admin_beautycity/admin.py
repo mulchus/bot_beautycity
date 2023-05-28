@@ -47,23 +47,23 @@ class ScheduleAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_filter = ('specialist', 'service', ('reception_datetime', DateTimeRangeFilter))
     ordering = ('reception_datetime', )
 
-    @action(label='Расписать последующий день', description='По всем специалистам, начиная со следующей '
-                                                            'после последней даты')
+    @action(label='Schedule next day', description='For all specialists, starting with the following '
+                                                   'after the last date')
     def schedule_next_day(self, request, obj):
         last_shedule = Schedule.objects.all().order_by('-reception_datetime', 'pk')[0]
         schedule_set_day(last_shedule.reception_datetime + timedelta(1))
 
-    @action(label='Расписать завтрашний день', description='По всем специалистам, завтрашней датой')
+    @action(label='Paint tomorrow', description='According to all experts, tomorrows date')
     def schedule_tomorrow(self, request, obj):
         schedule_set_day(date.today() + timedelta(1))
 
-    @action(label='Расписать сегодняшний день', description='По всем специалистам, сегодняшней датой')
+    @action(label='Paint today', description='According to all experts, todays date')
     def schedule_today(self, request, obj):
         schedule_set_day(date.today())
 
     changelist_actions = ('schedule_next_day', 'schedule_tomorrow', 'schedule_today', )
 
 
-admin.site.site_header = 'Панель администратора'
-admin.site.site_title = '"Салон BeautyCity"'
-admin.site.index_title = 'Доступные разделы:'
+admin.site.site_header = 'Admin panel'
+admin.site.site_title = '"Saloon BeautyCity"'
+admin.site.index_title = 'Available sections:'
