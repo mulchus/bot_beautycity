@@ -342,7 +342,7 @@ async def buy(cb: types.CallbackQuery, state: FSMContext):
         photo_size=416,
         is_flexible=False,
         prices=[price],
-        start_parameter=txt,
+        start_parameter='test',
         payload='test-invoice-payload'
     )
 
