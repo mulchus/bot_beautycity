@@ -44,7 +44,7 @@ def make_order(full_schedule_date, specialist_id, client_id, service_id, incogni
 
 
 def get_datetime(date, specialist):
-    schedule = Schedule.objects.filter(reception_datetime__date=datetime(date.year, date.month, date.day), specialist=specialist, client__isnull=False)
+    schedule = Schedule.objects.filter(reception_datetime__date=datetime(date.year, date.month, date.day), specialist=specialist, service__isnull=False)
     start_hour = 8
     start_time = datetime(date.year, date.month, date.day, start_hour, 0, 0)
     order_dates = []
