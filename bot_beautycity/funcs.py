@@ -4,11 +4,12 @@ from datetime import datetime, timedelta
 import dotenv
 import django
 from aiogram import types
-from admin_beautycity.models import Client, Schedule
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bot_beautycity.settings')
 # os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 django.setup()
+
+from admin_beautycity.models import Client, Schedule
 
 dotenv.load_dotenv()
 
@@ -41,7 +42,6 @@ def registration_client(name, phone, tg_account, tg_id):
         return client
     except django.db.utils.IntegrityError:
         pass
-
 
 
 def make_order(full_schedule_date, specialist_id, client_id,
@@ -91,8 +91,10 @@ def get_datetime(date, specialist):
             time_window = f'{8 + i // 2} : {minutes}'
             dates.append(order)
 
-
-            possible_time.append(types.InlineKeyboardButton(time_window, callback_data=f'Possible window{index}'))
+            possible_time.append(types.InlineKeyboardButton(
+                time_window,
+                callback_data=f'Possible time windows {index}'
+            ))
             index += 1
     test_filled_schedule = Schedule.objects.filter(
         reception_datetime__date=datetime(date.year, date.month, date.day),

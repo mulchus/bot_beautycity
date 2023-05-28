@@ -8,9 +8,14 @@ ADDITIONAL_BUTTONS = [CALL_TO_US, EXIT, ]
 
 client_start_markup = types.InlineKeyboardMarkup(row_width=2)
 client_start_markup_buttons = [
-
-    types.InlineKeyboardButton('About us', url='https://telegra.ph/O-salonah-krasoty-BeautyCity-05-23'),
-    types.InlineKeyboardButton('Sign up for the service', callback_data='choice_service'),
+    types.InlineKeyboardButton(
+        'About us',
+        url='https://telegra.ph/O-salonah-krasoty-BeautyCity-05-23'
+    ),
+    types.InlineKeyboardButton(
+        'Sign up for the service',
+        callback_data='choice_service'
+    ),
     CALL_TO_US,
 ]
 client_start_markup.add(*client_start_markup_buttons)
@@ -39,7 +44,6 @@ choose_datetime_buttons = [
     types.InlineKeyboardButton('Today', callback_data='today'),
     types.InlineKeyboardButton('Tomorrow', callback_data='tomorrow'),
     types.InlineKeyboardButton('Select in calendar', callback_data='calendar'),
-    types.InlineKeyboardButton('Pay the order', callback_data='buy'),
 ] + ADDITIONAL_BUTTONS
 choose_datetime.add(*choose_datetime_buttons)
 
@@ -59,9 +63,9 @@ accept_personal_data.add(*accept_personal_data_buttons)
 
 final_markup = types.InlineKeyboardMarkup(row_width=2)
 final_markup_buttons = [
-    types.InlineKeyboardButton('Оплатить заказ?', callback_data='buy'),
+    types.InlineKeyboardButton('Pay the order', callback_data='buy'),
     types.InlineKeyboardButton(
-        'Закончить работы с ботом',
+        'Close bot',
         callback_data='final'
     ),
 ]
