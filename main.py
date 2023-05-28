@@ -163,42 +163,22 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     if cb.data == 'tomorrow':
         date = datetime.now() + timedelta(days=1)
     await state.update_data(date=date)
-    client_id = await sync_to_async(funcs.get_client_id)(cb.from_user.username)
-    if not client_id:
-        await state.update_data(client_id=None)
-        payloads['messages_responses'].append(await cb.message.answer(
-            'We invite you to register in our database.'
-            'Get a 5% discount.')
+    markup, dates = await sync_to_async(funcs.get_datetime)(
+        date,
+        payloads['specialist_id']
+    )
+    if not dates:
+        await cb.message.answer(
+            'No free slots, please choose other day',
+            reply_markup=m.choose_datetime
         )
-        payloads['messages_responses'].append(await cb.message.answer(
-            'To register, read the consent '
-            'for the processing of personal data.')
-        )
-        payloads['messages_responses'].append(await bot.send_document(
-            chat_id=cb.from_user.id,
-            document=open(Path(BASE_DIR, 'permitted.pdf'), 'rb'),
-            reply_markup=m.accept_personal_data)
-        )
-        await UserState.get_registration.set()
     else:
-        await state.update_data(client_id=client_id)
-        await state.update_data(incognito_phone=None)
-        markup, dates = await sync_to_async(funcs.get_datetime)(
-            date,
-            payloads['specialist_id']
+        await state.update_data(dates=dates)
+        await cb.message.answer(
+            'Possible time windows:',
+            reply_markup=markup
         )
 
-        if dates:
-            await state.update_data(dates=dates)
-            await cb.message.answer(
-                'Possible time windows:',
-                reply_markup=markup
-            )
-        else:
-            await cb.message.answer(
-                'No free slots, please choose other day',
-                reply_markup=m.choose_datetime
-            )
     await cb.answer()
 
 
@@ -268,18 +248,7 @@ async def phone_verification(msg: types.Message, state: FSMContext):
     else:
         incognito_phone = phone_as_e164
     await state.update_data(incognito_phone=incognito_phone)
-    markup, dates = await sync_to_async(funcs.get_datetime)(
-        payloads['date'],
-        payloads['specialist_id']
-    )
-    if dates:
-        await state.update_data(dates=dates)
-        await msg.answer('Possible time windows:', reply_markup=markup)
-    else:
-        await msg.answer(
-            'No free slots, please choose other day',
-            reply_markup=m.choose_datetime
-        )
+    await record_save(state)
 
 
 async def record_save(state: FSMContext):
@@ -394,28 +363,6 @@ async def process_simple_calendar(
         )
         payloads = await state.get_data()
         await state.update_data(date=date)
-        client_id = await sync_to_async(funcs.get_client_id)(
-            cb.from_user.username
-        )
-    if not client_id:
-        await state.update_data(client_id=None)
-        payloads['messages_responses'].append(await cb.message.answer(
-            'Предлагаем Вам зарегистрироваться в нашей базе.'
-            'Получите скидку 5%.'
-        ))
-        payloads['messages_responses'].append(await cb.message.answer(
-            'Для регистрации ознакомьтесь с согласием на обработку'
-            'персональных данных.'
-        ))
-        payloads['messages_responses'].append(await bot.send_document(
-            chat_id=cb.from_user.id,
-            document=open(Path(BASE_DIR, 'permitted.pdf'), 'rb'),
-            reply_markup=m.accept_personal_data)
-        )
-        await UserState.get_registration.set()
-    else:
-        await state.update_data(client_id=client_id)
-        await state.update_data(incognito_phone=None)
         markup, dates = await sync_to_async(funcs.get_datetime)(
             date,
             payloads['specialist_id']
@@ -441,7 +388,28 @@ async def process_simple_calendar(
 async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
     date_index = cb.data[22:]
     await state.update_data(date_index=date_index)
-    await record_save(state)
+    payloads = await state.get_data()
+    client_id = await sync_to_async(funcs.get_client_id)(cb.from_user.username)
+    if not client_id:
+        await state.update_data(client_id=None)
+        payloads['messages_responses'].append(await cb.message.answer(
+            'We invite you to register in our database.'
+            'Get a 5% discount.')
+        )
+        payloads['messages_responses'].append(await cb.message.answer(
+            'To register, read the consent '
+            'for the processing of personal data.')
+        )
+        payloads['messages_responses'].append(await bot.send_document(
+            chat_id=cb.from_user.id,
+            document=open(Path(BASE_DIR, 'permitted.pdf'), 'rb'),
+            reply_markup=m.accept_personal_data)
+        )
+        await UserState.get_registration.set()
+    else:
+        await state.update_data(client_id=client_id)
+        await state.update_data(incognito_phone=None)
+        await record_save(state)
 
 
 @dp.callback_query_handler(
@@ -451,7 +419,6 @@ async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
 async def set_time_win(cb: types.CallbackQuery, state: FSMContext):
     date_index = cb.data[22:]
     await state.update_data(date_index=date_index)
-    await record_save(state)
 
 
 # видимо эти блоки ниже не понадобидись. Сделать запуск бота без on_startup
