@@ -174,7 +174,7 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(client_id=client_id)
         await state.update_data(incognito_phone=None)
         markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
-        await state.update_data(dates=dates)      
+        await state.update_data(dates=dates)
         await cb.message.answer('Возможное время:', reply_markup=markup)
     await cb.answer()
 
@@ -231,7 +231,6 @@ async def phone_verification(msg: types.Message, state: FSMContext):
     markup, dates = await sync_to_async(funcs.get_datetime)(payloads['date'], payloads['specialist_id'])
     await state.update_data(dates=dates)
     await msg.answer('Возможное время:', reply_markup=markup)
-    #await record_save(state)
 
 
 async def record_save(state: FSMContext):
@@ -263,15 +262,15 @@ async def record_save(state: FSMContext):
 
 
 # buy
-@dp.message_handler(Text(equals=['Buy'], ignore_case=True))
-async def payment(message: types.Message):
-#@dp.callback_query_handler(Text(['buy']), state=UserState.choice_datetime)
-#async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
+#@dp.message_handler(Text(equals=['Buy'], ignore_case=True))
+#async def payment(message: types.Message):
+@dp.callback_query_handler(Text(['buy']), state=UserState.choice_datetime)
+async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     if PAYMENT_TOKEN.split(':')[1] == 'TEST':
-        await bot.send_message(message.chat.id, 'Test payment!!!')
+        await bot.send_message(cb.message.chat.id, 'Test payment!!!')
 
     price = types.LabeledPrice(label='test1', amount=300*100)
-    await bot.send_invoice(message.chat.id,
+    await bot.send_invoice(cb.message.chat.id,
                            title='test2',
                            description='test2',
                            provider_token=PAYMENT_TOKEN,
@@ -287,15 +286,15 @@ async def payment(message: types.Message):
 
 
 # pre checkout (must be answered in 10 seconds)
-@dp.pre_checkout_query_handler(lambda query: True)
+@dp.pre_checkout_query_handler(lambda query: True, state=UserState.choice_datetime)
 async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
 
 # successfull payment
-@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT, state=UserState.choice_datetime)
 async def successful_payment(message: types.Message):
-    schedule_id = 1
+    schedule_id = 73
     print('Successful_payment:')
     payment_info = message.successful_payment.to_python()
     for k, v in payment_info.items():
@@ -314,26 +313,18 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
 
 
 # simple calendar usage
-@dp.callback_query_handler(simple_cal_callback.filter())
-async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
-    selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+@dp.callback_query_handler(simple_cal_callback.filter(), state=UserState.choice_datetime)
+async def process_simple_calendar(cb: CallbackQuery, callback_data: dict, state: FSMContext):
+    selected, date = await SimpleCalendar().process_selection(cb, callback_data)
     if selected:
-        await callback_query.message.answer(
+        await cb.message.answer(
             f'Вы выбрали {date.strftime("%d/%m/%Y")}, выберите удобное время:',
         )
-        order_dates = await sync_to_async(funcs.get_datetime)(date)
-        markup = types.InlineKeyboardMarkup(row_width=4)
-        possible_time = []
-        for i, order in enumerate(order_dates):
-            if order != 0:
-                if i % 2:
-                    minutes = '30'
-                else:
-                    minutes = '00'
-                time_window = f'{8 + i // 2} : {minutes}'
-                possible_time.append(types.InlineKeyboardButton(time_window, callback_data=i))
-        markup.add(*possible_time)
-        await callback_query.message.answer('Возможное время:', reply_markup=markup)
+        payloads = await state.get_data()
+        markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
+        await state.update_data(dates=dates)
+        await cb.message.answer('Возможное время:', reply_markup=markup)
+
 
 
 @dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.choice_datetime)
@@ -346,7 +337,6 @@ async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.phone_verification)
 async def set_time_win(cb: types.CallbackQuery, state: FSMContext):
     date_index = cb.data[14:]
-    print(1)
     await state.update_data(date_index=date_index)
     await record_save(state)
 

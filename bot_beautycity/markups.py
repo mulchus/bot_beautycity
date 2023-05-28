@@ -32,7 +32,8 @@ choose_datetime = types.InlineKeyboardMarkup(row_width=2)
 choose_datetime_buttons = [
     types.InlineKeyboardButton('Сегодня', callback_data='today'),
     types.InlineKeyboardButton('Завтра', callback_data='tomorrow'),
-    types.InlineKeyboardButton('Выбрать в календаре', callback_data='calendar')
+    types.InlineKeyboardButton('Выбрать в календаре', callback_data='calendar'),
+    types.InlineKeyboardButton('Оплатить заказ', callback_data='buy'),
 ] + ADDITIONAL_BUTTONS
 choose_datetime.add(*choose_datetime_buttons)
 
