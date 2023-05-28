@@ -174,7 +174,7 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(client_id=client_id)
         await state.update_data(incognito_phone=None)
         markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
-        await state.update_data(dates=dates)                
+        await state.update_data(dates=dates)      
         await cb.message.answer('Возможное время:', reply_markup=markup)
     await cb.answer()
 
@@ -228,7 +228,10 @@ async def phone_verification(msg: types.Message, state: FSMContext):
     else:
         incognito_phone = phone_as_e164
     await state.update_data(incognito_phone=incognito_phone)
-    await record_save(state)
+    markup, dates = await sync_to_async(funcs.get_datetime)(payloads['date'], payloads['specialist_id'])
+    await state.update_data(dates=dates)
+    await msg.answer('Возможное время:', reply_markup=markup)
+    #await record_save(state)
 
 
 async def record_save(state: FSMContext):
@@ -336,6 +339,14 @@ async def process_simple_calendar(callback_query: CallbackQuery, callback_data: 
 @dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.choice_datetime)
 async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
     date_index = cb.data[14:]
+    await state.update_data(date_index=date_index)
+    await record_save(state)
+
+
+@dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.phone_verification)
+async def set_time_win(cb: types.CallbackQuery, state: FSMContext):
+    date_index = cb.data[14:]
+    print(1)
     await state.update_data(date_index=date_index)
     await record_save(state)
 
