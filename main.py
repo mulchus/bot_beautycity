@@ -17,11 +17,15 @@ from textwrap import dedent
 from admin_beautycity.models import Client, Schedule, Service, Specialist
 from phonenumber_field.phonenumber import PhoneNumber
 from phonenumbers.phonenumberutil import NumberParseException
-
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup
+from aiogram_calendar import simple_cal_callback, SimpleCalendar
+from aiogram.types.message import ContentType
+from datetime import datetime, timedelta
 
 BASE_DIR = Path(__file__).resolve().parent
 dotenv.load_dotenv(Path(BASE_DIR, '.env'))
 token = os.environ['BOT_TOKEN']
+PAYMENT_TOKEN = os.environ['PAYMENT_TOKEN']
 
 bot = Bot(token=token)
 storage = MemoryStorage()
@@ -36,7 +40,6 @@ class UserState(StatesGroup):
     get_registration = State()
     set_name_phone = State()
     phone_verification = State()
-
 
 @dp.message_handler()
 async def start_conversation(msg: types.Message, state: FSMContext):
@@ -96,6 +99,7 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
     async for service in Service.objects.filter(name_english=cb.data):  # результат - одно значение!
         await state.update_data(service_id=service.pk)
         await state.update_data(service_name=service.name)
+
     messages_responses = await state.get_data('messages_responses')
     messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.name}" '
                                                                             f'стоит {service.cost} руб.'))
@@ -147,6 +151,11 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     payloads = await state.get_data()
     for message in payloads['messages_responses']:
         await message.delete()
+    if cb.data=='today':
+        date = datetime.now()
+    if cb.data=='tomorrow':
+        date = datetime.now() + timedelta(days=1)
+    await state.update_data(date=date)
     client_id = await sync_to_async(funcs.get_client_id)(cb.from_user.username)
     if not client_id:
         # клиент зарегистрирован? проверка и далее - флаг и запрос номера телефона
@@ -164,7 +173,9 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
     else:
         await state.update_data(client_id=client_id)
         await state.update_data(incognito_phone=None)
-        await record_save(state)
+        markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
+        await state.update_data(dates=dates)                
+        await cb.message.answer('Возможное время:', reply_markup=markup)
     await cb.answer()
 
 
@@ -225,18 +236,20 @@ async def record_save(state: FSMContext):
     # нужно из введенных пользователем даты и времени сделать проверку их наличия свободных в расписании и оттуда взять
     # chedule_id
     # schedule_id = 2  # временно
-    schedule_date = '2022-02-02'
-    schedule_time = '15:45'
+    #schedule_date = '2022-02-02'
+    #schedule_time = '15:45'
 
     payloads = await state.get_data()
     tg_id = payloads['tg_id']
     client_id = payloads['client_id']
-    schedule_id = payloads['schedule_id']
+    #schedule_id = payloads['schedule_id']
     incognito_phone = payloads['incognito_phone']
+    specialist_id = payloads['service_id']
+    full_schedule_date = payloads['dates'][int(payloads['date_index'])]
+    schedule_date = full_schedule_date.strftime('%m/%d/%Y')
+    schedule_time = full_schedule_date.strftime('%H:%M')
 
-    await sync_to_async(print)(schedule_id)
-
-    await sync_to_async(funcs.make_order)(schedule_id, client_id, payloads['service_id'], incognito_phone)
+    await sync_to_async(funcs.make_order)(full_schedule_date, specialist_id, client_id, payloads['service_id'], incognito_phone)
     await bot.send_message(tg_id, f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
                                   # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
                                   f'к специалисту {payloads["specialist_name"]}! \n'                       
@@ -244,6 +257,87 @@ async def record_save(state: FSMContext):
                                   f'МО, Балашиха, штабс DEVMAN”')
     await state.reset_state(with_data=False)
     await bot.send_message(tg_id, 'Главное меню', reply_markup=m.client_start_markup)
+
+
+# buy
+@dp.message_handler(Text(equals=['Buy'], ignore_case=True))
+async def payment(message: types.Message):
+#@dp.callback_query_handler(Text(['buy']), state=UserState.choice_datetime)
+#async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
+    if PAYMENT_TOKEN.split(':')[1] == 'TEST':
+        await bot.send_message(message.chat.id, 'Test payment!!!')
+
+    price = types.LabeledPrice(label='test1', amount=300*100)
+    await bot.send_invoice(message.chat.id,
+                           title='test2',
+                           description='test2',
+                           provider_token=PAYMENT_TOKEN,
+                           currency='rub',
+                           photo_url="https://www.aroged.com/wp-content/uploads/2022/06/Telegram-has-a-premium-subscription.jpg",
+                           photo_width=416,
+                           photo_height=234,
+                           photo_size=416,
+                           is_flexible=False,
+                           prices=[price],
+                           start_parameter='test2',
+                           payload='test2')
+
+
+# pre checkout (must be answered in 10 seconds)
+@dp.pre_checkout_query_handler(lambda query: True)
+async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+
+
+# successfull payment
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def successful_payment(message: types.Message):
+    schedule_id = 1
+    print('Successful_payment:')
+    payment_info = message.successful_payment.to_python()
+    for k, v in payment_info.items():
+        print(f'{k} = {v}')
+
+    await bot.send_message(message.chat.id,
+                           f'Payment at {message.successful_payment.total_amount // 100} {message.successful_payment.currency} done')
+    await sync_to_async(funcs.pay_order)(schedule_id)
+
+
+#@dp.message_handler(Text(equals=['Calendar'], ignore_case=True))
+#async def nav_cal_handler(message: Message):
+@dp.callback_query_handler(Text(['calendar']), state=UserState.choice_datetime)
+async def set_datetime(cb: types.CallbackQuery, state: FSMContext):    
+    await cb.message.answer("Please select a date: ", reply_markup=await SimpleCalendar().start_calendar())
+
+
+# simple calendar usage
+@dp.callback_query_handler(simple_cal_callback.filter())
+async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
+    selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+    if selected:
+        await callback_query.message.answer(
+            f'Вы выбрали {date.strftime("%d/%m/%Y")}, выберите удобное время:',
+        )
+        order_dates = await sync_to_async(funcs.get_datetime)(date)
+        markup = types.InlineKeyboardMarkup(row_width=4)
+        possible_time = []
+        for i, order in enumerate(order_dates):
+            if order != 0:
+                if i % 2:
+                    minutes = '30'
+                else:
+                    minutes = '00'
+                time_window = f'{8 + i // 2} : {minutes}'
+                possible_time.append(types.InlineKeyboardButton(time_window, callback_data=i))
+        markup.add(*possible_time)
+        await callback_query.message.answer('Возможное время:', reply_markup=markup)
+
+
+@dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.choice_datetime)
+async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
+    date_index = cb.data[14:]
+    await state.update_data(date_index=date_index)
+    await record_save(state)
 
 
 async def sentinel():
