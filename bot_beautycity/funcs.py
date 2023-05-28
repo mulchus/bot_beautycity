@@ -39,12 +39,14 @@ def registration_client(name, phone, tg_account, tg_id):
 
 
 def make_order(full_schedule_date, specialist_id, client_id, service_id, incognito_phone=''):
-    Schedule.objects.filter(reception_datetime=full_schedule_date, specialist=specialist_id).update(client=client_id, service=service_id,
-                                                   incognito_phone=incognito_phone)
+    Schedule.objects.filter(reception_datetime=full_schedule_date,
+                            specialist=specialist_id).update(client=client_id, service=service_id,
+                                                             incognito_phone=incognito_phone)
 
 
 def get_datetime(date, specialist):
-    schedule = Schedule.objects.filter(reception_datetime__date=datetime(date.year, date.month, date.day), specialist=specialist, service__isnull=False)
+    schedule = Schedule.objects.filter(reception_datetime__date=datetime(date.year, date.month, date.day),
+                                       specialist=specialist, service__isnull=False)
     start_hour = 8
     start_time = datetime(date.year, date.month, date.day, start_hour, 0, 0)
     order_dates = []
@@ -67,7 +69,7 @@ def get_datetime(date, specialist):
                 minutes = '00'
             time_window = f'{8 + i // 2} : {minutes}'
             dates.append(order)
-            possible_time.append(types.InlineKeyboardButton(time_window, callback_data=f'Возможное окно{index}'))
+            possible_time.append(types.InlineKeyboardButton(time_window, callback_data=f'Possible window{index}'))
             index += 1
     markup.add(*possible_time)
     return markup, dates

@@ -43,7 +43,7 @@ def schedule_set_day(set_day):
 
 @admin.register(Schedule)
 class ScheduleAdmin(DjangoObjectActions, admin.ModelAdmin):
-    list_display = ('specialist', 'reception_datetime', 'client', 'service', 'incognito_phone')
+    list_display = ('specialist', 'reception_datetime', 'client', 'service', 'incognito_phone', 'payed')
     list_filter = ('specialist', 'service', ('reception_datetime', DateTimeRangeFilter))
     ordering = ('reception_datetime', )
 

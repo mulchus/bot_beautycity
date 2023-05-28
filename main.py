@@ -44,33 +44,33 @@ class UserState(StatesGroup):
 @dp.message_handler()
 async def start_conversation(msg: types.Message, state: FSMContext):
     messages_responses = []
-    message = dedent("""  Добро пожаловать! 
-    Салон красоты BeautyCity – это не только высокопрофессиональные услуги, но и уютный салон, \
-     в котором всегда рады гостям. 
-    Безупречность в работе и творческий подход, внимательные мастера учтут и воплотят все Ваши пожелания!""")
+    message = dedent("  Welcome! \n"
+                     "BeautyCity beauty salon is not only highly professional services, but also a cozy salon where "
+                     "guests are always welcome. \nPerfection in work and creativity, attentive craftsmen will take "
+                     "into account and realize all your wishes!")
     messages_responses.append(await msg.answer(dedent(message)))
     records_count = await sync_to_async(funcs.get_records_count)(msg.from_user.username)
     if records_count:
-        message = await msg.answer(f'С возвращением, {msg.from_user.first_name}. '
-                                   f'У Вас уже было записей: {records_count}.')
+        message = await msg.answer(f'Welcome back, {msg.from_user.first_name}. '
+                                   f'You already had recordings: {records_count}.')
     else:
-        message = await msg.answer(f'Здравствуйте, {msg.from_user.first_name}.')
+        message = await msg.answer(f'Hello, {msg.from_user.first_name}.')
     messages_responses.append(message)
-    await msg.answer('Главное меню', reply_markup=m.client_start_markup)
+    await msg.answer('Main menu', reply_markup=m.client_start_markup)
     await state.update_data(messages_responses=messages_responses)
 
 
 @dp.callback_query_handler(text="exit", state=[UserState, None])
 async def exit_client_proceeding(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
-    await cb.message.answer('Главное меню', reply_markup=m.client_start_markup)
+    await cb.message.answer('Main menu', reply_markup=m.client_start_markup)
     await state.reset_state(with_data=False)
     await cb.answer()
 
 
 @dp.callback_query_handler(text="call_to_us", state=[UserState, None])
 async def call_to_us_message(cb: types.CallbackQuery):
-    await cb.message.answer('Рады Вашему звонку в любое время – +7(800)555-35-35')
+    await cb.message.answer('We are glad to receive your call at any time – +7(800)555-35-35')
     await cb.answer()
 
 
@@ -84,7 +84,7 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(messages_responses=[])
     except TypeError:
         pass
-    await cb.message.answer('Выбор сервиса:', reply_markup=m.get_service)
+    await cb.message.answer('Choosing a service:', reply_markup=m.get_service)
     await UserState.choice_service.set()
     await cb.answer()
 
@@ -101,21 +101,21 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(service_name=service.name)
 
     messages_responses = await state.get_data('messages_responses')
-    messages_responses['messages_responses'].append(await cb.message.answer(f'Услуга "{service.name}" '
-                                                                            f'стоит {service.cost} руб.'))
-    await cb.message.answer('Выбор специалиста:', reply_markup=m.get_specialist)
+    messages_responses['messages_responses'].append(await cb.message.answer(f'Service "{service.name}" '
+                                                                            f'costs {service.cost} rur.'))
+    await cb.message.answer('Choosing a specialist:', reply_markup=m.get_specialist)
     await UserState.choice_specialist.set()
 
 
 @dp.callback_query_handler(Text([specialist for specialist in
-                                 Specialist.objects.all().values_list('name', flat=True)] + ['Любой']),
+                                 Specialist.objects.all().values_list('name', flat=True)] + ['Any']),
                            state=UserState.choice_specialist)
 async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     payloads = await state.get_data()
     for message in payloads['messages_responses']:
         await message.delete()
-    if cb.data == 'Любой':
+    if cb.data == 'Any':
         await state.update_data(specialist_id=None)  # при выборе "Любой" ID специалиста None
         await state.update_data(specialist_name=None)
 
@@ -135,11 +135,12 @@ async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     if schedule:
         await state.update_data(schedule_id=schedule.pk)
     else:
-        await cb.message.answer('К этому специалисту нет записи, выберите другого.', reply_markup=m.get_specialist)
+        await cb.message.answer('There is no record for this specialist, choose another one.',
+                                reply_markup=m.get_specialist)
         # await asyncio.sleep(3)
         return
 
-    await cb.message.answer('Выбор даты и времени:', reply_markup=m.choose_datetime)
+    await cb.message.answer('Date and time selection:', reply_markup=m.choose_datetime)
     await UserState.choice_datetime.set()
     await cb.answer()
 
@@ -161,10 +162,10 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         # клиент зарегистрирован? проверка и далее - флаг и запрос номера телефона
         # если не зарегистрирован
         await state.update_data(client_id=None)
-        payloads['messages_responses'].append(await cb.message.answer('Предлагаем Вам зарегистрироваться в нашей базе. '
-                                                                      'Получите скидку 5%.'))
-        payloads['messages_responses'].append(await cb.message.answer('Для регистрации ознакомьтесь с согласием '
-                                                                      'на обработку персональных данных.'))
+        payloads['messages_responses'].append(await cb.message.answer('We invite you to register in our database.'
+                                                                      'Get a 5% discount.'))
+        payloads['messages_responses'].append(await cb.message.answer('To register, read the consent '
+                                                                      'for the processing of personal data.'))
         payloads['messages_responses'].append(await bot.send_document(chat_id=cb.from_user.id,
                                                                       document=open(Path(BASE_DIR, 'permitted.pdf'),
                                                                                     'rb'),
@@ -175,7 +176,7 @@ async def set_datetime(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(incognito_phone=None)
         markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
         await state.update_data(dates=dates)
-        await cb.message.answer('Возможное время:', reply_markup=markup)
+        await cb.message.answer('Possible time:', reply_markup=markup)
     await cb.answer()
 
 
@@ -188,11 +189,11 @@ async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
 
     if cb.data == 'personal_no':
         registration_consent = False
-        await cb.message.answer('Жаль. Но для связи с Вами нам необходимы Ваши имя и телефон.')
+        await cb.message.answer('Sorry. But we need your name and phone number to contact you.')
     else:
         registration_consent = True
     await state.update_data(registration_consent=registration_consent)
-    await cb.message.answer('Введите свое имя:')
+    await cb.message.answer('Enter your name:')
     await UserState.set_name_phone.set()
     await cb.answer()
 
@@ -200,8 +201,8 @@ async def accepting_permission(cb: types.CallbackQuery, state: FSMContext):
 @dp.message_handler(lambda msg: msg.text, state=UserState.set_name_phone)
 async def set_name_phone(msg: types.Message, state: FSMContext):
     await state.update_data(name=msg.text)
-    await msg.answer('Введите свой телефон. Номер телефона необходимо ввести в формате: "+99999999999". '
-                     'Допускается до 15 цифр.')
+    await msg.answer('Enter your phone number. The phone number must be entered in the format: "+99999999999". '
+                     'Up to 15 digits are allowed.')
     await UserState.phone_verification.set()
 
 
@@ -211,13 +212,13 @@ async def phone_verification(msg: types.Message, state: FSMContext):
         phone = PhoneNumber.from_string(msg.text, 'RU')
         phone_check = phone.is_valid()
     except NumberParseException:
-        await msg.answer('Некорректно введен телефон! Попробуйте еще раз.')
+        await msg.answer('The phone number was entered incorrectly! Try again.')
         return
     if not phone_check:
-        await msg.answer('Некорректно введен телефон! Проверьте формат. Попробуйте еще раз.')
+        await msg.answer('The phone number was entered incorrectly! Check the format. Try again.')
         return
     phone_as_e164 = phone.as_e164
-    await msg.answer(f'Телефон введен корректно! {phone_as_e164}')
+    await msg.answer(f'The phone number is entered correctly! {phone_as_e164}')
 
     payloads = await state.get_data()
     incognito_phone = ''
@@ -230,7 +231,7 @@ async def phone_verification(msg: types.Message, state: FSMContext):
     await state.update_data(incognito_phone=incognito_phone)
     markup, dates = await sync_to_async(funcs.get_datetime)(payloads['date'], payloads['specialist_id'])
     await state.update_data(dates=dates)
-    await msg.answer('Возможное время:', reply_markup=markup)
+    await msg.answer('Possible time:', reply_markup=markup)
 
 
 async def record_save(state: FSMContext):
@@ -252,13 +253,12 @@ async def record_save(state: FSMContext):
     schedule_time = full_schedule_date.strftime('%H:%M')
 
     await sync_to_async(funcs.make_order)(full_schedule_date, specialist_id, client_id, payloads['service_id'], incognito_phone)
-    await bot.send_message(tg_id, f'Спасибо, Вы записаны на услугу "{payloads["service_name"]}" \n'
-                                  # если "Любой" - будет ошибка. Надо выше сделать выбор и сохранение конкретного спеца
-                                  f'к специалисту {payloads["specialist_name"]}! \n'                       
-                                  f'До встречи {schedule_date} в {schedule_time} по адресу: '
-                                  f'МО, Балашиха, штабс DEVMAN”')
+    await bot.send_message(tg_id, f'Thank you, you are signed up for the service "{payloads["service_name"]}" '                                  
+                                  f'to a specialist {payloads["specialist_name"]}! \n'                       
+                                  f'See you soon {schedule_date} в {schedule_time} at: '
+                                  f'Moscow region, Balashikha, headquarters DEVMAN')
     await state.reset_state(with_data=False)
-    await bot.send_message(tg_id, 'Главное меню', reply_markup=m.client_start_markup)
+    await bot.send_message(tg_id, 'Main menu', reply_markup=m.client_start_markup)
 
 
 # buy
@@ -294,14 +294,15 @@ async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
 # successfull payment
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT, state=UserState.choice_datetime)
 async def successful_payment(message: types.Message):
-    schedule_id = 73
+    schedule_id = 29
     print('Successful_payment:')
     payment_info = message.successful_payment.to_python()
     for k, v in payment_info.items():
         print(f'{k} = {v}')
 
     await bot.send_message(message.chat.id,
-                           f'Payment at {message.successful_payment.total_amount // 100} {message.successful_payment.currency} done')
+                           f'Payment at {message.successful_payment.total_amount // 100} '
+                           f'{message.successful_payment.currency} done')
     await sync_to_async(funcs.pay_order)(schedule_id)
 
 
@@ -318,29 +319,29 @@ async def process_simple_calendar(cb: CallbackQuery, callback_data: dict, state:
     selected, date = await SimpleCalendar().process_selection(cb, callback_data)
     if selected:
         await cb.message.answer(
-            f'Вы выбрали {date.strftime("%d/%m/%Y")}, выберите удобное время:',
+            f'You have chosen {date.strftime("%d/%m/%Y")}, choose a convenient time:',
         )
         payloads = await state.get_data()
         markup, dates = await sync_to_async(funcs.get_datetime)(date, payloads['specialist_id'])
         await state.update_data(dates=dates)
-        await cb.message.answer('Возможное время:', reply_markup=markup)
+        await cb.message.answer('Possible time: ', reply_markup=markup)
 
 
-
-@dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.choice_datetime)
+@dp.callback_query_handler(Text(startswith='Possible'), state=UserState.choice_datetime)
 async def set_time_window(cb: types.CallbackQuery, state: FSMContext):
-    date_index = cb.data[14:]
+    date_index = cb.data[15:]
     await state.update_data(date_index=date_index)
     await record_save(state)
 
 
-@dp.callback_query_handler(Text(startswith='Возможное'), state=UserState.phone_verification)
+@dp.callback_query_handler(Text(startswith='Possible'), state=UserState.phone_verification)
 async def set_time_win(cb: types.CallbackQuery, state: FSMContext):
-    date_index = cb.data[14:]
+    date_index = cb.data[15:]
     await state.update_data(date_index=date_index)
     await record_save(state)
 
 
+# видимо эти блоки ниже не понадобидись. Сделать запуск бота без on_startup
 async def sentinel():
     while 1:
         logging.info('Какая то проверка в течении какого то периода')
@@ -350,4 +351,4 @@ async def sentinel():
 async def on_startup(_):
     asyncio.create_task(sentinel())
 
-executor.start_polling(dp, skip_updates=False, on_startup=on_startup)
+executor.start_polling(dp, skip_updates=False)
