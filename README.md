@@ -57,7 +57,7 @@ https://t.me/BeautyCityBot
 При создании расписания уже имеющиеся записи сохраняются.    
 
 Основной вид раздела расписаний (Schedules):  
-
+![admin-schedules](https://github.com/mulchus/bot_beautycity/assets/111083714/a5e6ca55-ccbf-4e47-9e6f-039e90c7017b)
 
 
 ## Цели проекта
