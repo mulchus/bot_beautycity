@@ -96,17 +96,15 @@ async def service_choosing(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(messages_responses=[])
     except TypeError:
         pass
-    await cb.message.answer('Choosing a service:', reply_markup=m.get_service)
+    await cb.message.answer(
+        'Choosing a service:',
+        reply_markup=await sync_to_async(m.get_services)()
+    )
     await UserState.choice_service.set()
     await cb.answer()
 
 
-@dp.callback_query_handler(
-    Text([service for service in Service.objects.all().values_list(
-        'name', flat=True
-    )]),
-    state=UserState.choice_service
-)
+@dp.callback_query_handler(state=UserState.choice_service)
 async def set_service(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     await state.update_data(tg_id=cb.from_user.id)
@@ -119,20 +117,16 @@ async def set_service(cb: types.CallbackQuery, state: FSMContext):
     messages_responses = await state.get_data('messages_responses')
     messages_responses['messages_responses'].append(await cb.message.answer(
         f'Service "{service.name}" '
-        f'costs {service.cost} rur.'))
+        f'costs {service.cost} rub.'))
     await cb.message.answer(
         'Choosing a specialist:',
-        reply_markup=m.get_specialist
+        reply_markup=await sync_to_async(m.get_specialists)()
     )
     await UserState.choice_specialist.set()
+    await cb.answer()
 
 
-@dp.callback_query_handler(
-    Text([specialist for specialist in Specialist.objects.all().values_list(
-        'name', flat=True
-    )]),
-    state=UserState.choice_specialist
-)
+@dp.callback_query_handler(state=UserState.choice_specialist)
 async def set_specialist(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.delete()
     payloads = await state.get_data()

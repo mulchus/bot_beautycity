@@ -20,24 +20,29 @@ client_start_markup_buttons = [
 ]
 client_start_markup.add(*client_start_markup_buttons)
 
-get_service = types.InlineKeyboardMarkup(row_width=2)
-services = Service.objects.all()
-get_service_buttons = [types.InlineKeyboardButton(
-    service.name,
-    callback_data=service.name
-) for service in services] + ADDITIONAL_BUTTONS
-get_service.add(*get_service_buttons)
 
-get_specialist = types.InlineKeyboardMarkup(row_width=2)
-specialists = Specialist.objects.all()
-get_specialist_buttons = [types.InlineKeyboardButton(
+def get_services():
+    get_service = types.InlineKeyboardMarkup(row_width=2)
+    services = Service.objects.all()
+    get_service_buttons = [types.InlineKeyboardButton(
+        service.name,
+        callback_data=service.name
+    ) for service in services] + ADDITIONAL_BUTTONS
+    get_service.add(*get_service_buttons)
+    return get_service
 
-    specialist.name,
-    callback_data=specialist.name
-) for specialist in specialists]
 
-get_specialist_buttons += ADDITIONAL_BUTTONS
-get_specialist.add(*get_specialist_buttons)
+def get_specialists():
+    get_specialist = types.InlineKeyboardMarkup(row_width=2)
+    specialists = Specialist.objects.all()
+    get_specialist_buttons = [types.InlineKeyboardButton(
+        specialist.name,
+        callback_data=specialist.name
+    ) for specialist in specialists]
+    get_specialist_buttons += ADDITIONAL_BUTTONS
+    get_specialist.add(*get_specialist_buttons)
+    return get_specialist
+
 
 choose_datetime = types.InlineKeyboardMarkup(row_width=2)
 choose_datetime_buttons = [
